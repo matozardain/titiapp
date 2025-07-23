@@ -272,7 +272,7 @@ function App() {
 
         try {
             const medDefsRef = doc(db, `artifacts/${appId}/public/data/medicationDefinitions`, 'currentDefinitions');
-            await setDoc(medDefsRef, { medications: updatedMedications }, { merge: true });
+            await setDoc(medDefsRef, { medications: updatedMedations }, { merge: true });
             setMedicationDefinitions(updatedMedications); // Actualizar el estado local
             resetMedicationForm();
         } catch (error) {
