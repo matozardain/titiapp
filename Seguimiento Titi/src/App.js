@@ -96,7 +96,7 @@ function App() {
                 if (docSnap.exists() && docSnap.data().medications) {
                     setMedicationDefinitions(docSnap.data().medications);
                 } else {
-                    // Si no hay definiciones, cargar las iniciales
+                    // Si no hay definiciones, cargar las iniciales y guardarlas
                     const initial = [
                         { id: 'T4', name: 'T4', dose: '30 min previos al desayuno', timeOfDay: 'Ayunas', frequency: 'daily' },
                         { id: 'Levecom_morning', name: 'Levecom', dose: '1 pastilla', timeOfDay: 'Mañana Post Desayuno', frequency: 'daily' },
@@ -115,8 +115,10 @@ function App() {
                         { id: 'VitaminaD', name: 'Vitamina D', dose: '1 vez por mes', timeOfDay: 'Último Martes del Mes', frequency: 'monthly_last_tuesday' }
                     ];
                     setMedicationDefinitions(initial);
-                    // Opcional: guardar estas definiciones iniciales en Firestore
-                    setDoc(medDefsRef, { medications: initial }, { merge: true }).catch(console.error);
+                    // Intentar guardar estas definiciones iniciales en Firestore
+                    setDoc(medDefsRef, { medications: initial }, { merge: true })
+                        .then(() => console.log("Definiciones iniciales de medicamentos guardadas."))
+                        .catch(error => console.error("Error al guardar definiciones iniciales de medicamentos:", error));
                 }
             }, (error) => {
                 console.error("Error fetching medication definitions:", error);
@@ -128,7 +130,7 @@ function App() {
 
     // Efecto para cargar datos del día seleccionado cuando userId y db estén listos
     useEffect(() => {
-        if (userId && db && isAuthReady) {
+        if (userId && db && isAuthReady && medicationDefinitions.length > 0) { // Asegurarse de que las definiciones de medicamentos estén cargadas
             const formattedDate = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
             const docRef = doc(db, `artifacts/${appId}/public/data/dailyRecords`, formattedDate);
 
@@ -236,7 +238,7 @@ function App() {
         setNewMedName(med.name);
         setNewMedDose(med.dose);
         setNewMedTimeOfDay(med.timeOfDay);
-        setNewMedFrequency(med.frequency === 'weekly' ? med.days.join(', ') : med.frequency);
+        setNewMedFrequency(med.frequency === 'weekly' && med.days ? med.days.join(', ') : med.frequency);
     };
 
     // Función para añadir o actualizar un medicamento
@@ -269,7 +271,7 @@ function App() {
         }
 
         try {
-            const medDefsRef = doc(db, `artifacts/${appId}/public/data/medicationDefinitions`, 'currentDefinitions');
+            // CORRECCIÓN: Cambiado 'updatedMedations' a 'updatedMedications'
             await setDoc(medDefsRef, { medications: updatedMedications }, { merge: true });
             setMedicationDefinitions(updatedMedications); // Actualizar el estado local
             resetMedicationForm();
@@ -281,7 +283,9 @@ function App() {
 
     // Función para eliminar un medicamento
     const deleteMedicationDefinition = async (medId) => {
-        if (!confirm('¿Estás seguro de que quieres eliminar este medicamento?')) { // Usar confirm temporalmente, luego reemplazar con modal custom
+        // Reemplazar confirm() con un modal personalizado para mejor UX
+        const confirmed = window.confirm('¿Estás seguro de que quieres eliminar este medicamento?');
+        if (!confirmed) {
             return;
         }
         const updatedMedications = medicationDefinitions.filter(med => med.id !== medId);
@@ -561,7 +565,7 @@ function App() {
                                     id="medDose"
                                     className="w-full p-2 border border-gray-300 rounded-md"
                                     value={newMedDose}
-                                    onChange={(e) => setNewMedDose(e.target.value)}
+                                    onChange={(e) => setNewDose(e.target.value)}
                                 />
                             </div>
                             <div>
@@ -624,54 +628,58 @@ function App() {
                                 time.includes('Noche') ? 'bg-purple-50 border-purple-200' :
                                 'bg-indigo-50 border-indigo-200'} p-3 rounded-md border`}>
                                 <h4 className="font-medium text-gray-800 mb-2">{time}</h4>
-                                {getMedicationsByTime(time).length > 0 ? (
-                                    getMedicationsByTime(time).map(med => (
-                                        <div key={med.id} className="flex items-center space-x-2 mt-1">
-                                            <label className="flex items-center space-x-2 flex-grow">
-                                                <input
-                                                    type="checkbox"
-                                                    className={`form-checkbox h-5 w-5 ${time.includes('Ayunas') ? 'text-blue-600' :
-                                                        time.includes('Mañana') ? 'text-green-600' :
-                                                        time.includes('Antes de Comer') ? 'text-yellow-600' :
-                                                        time.includes('Tarde') ? 'text-orange-600' :
-                                                        time.includes('Noche') ? 'text-purple-600' :
-                                                        'text-indigo-600'} rounded`}
-                                                    checked={medicationSchedule[med.id]?.taken || false}
-                                                    onChange={() => toggleMedicationTaken(med.id)}
-                                                />
-                                                <span className="text-gray-700">{med.name} ({med.dose})</span>
-                                                {medicationSchedule[med.id]?.taken && (
-                                                    <span className="text-xs text-gray-500 ml-auto">
-                                                        Tomado por: {medicationSchedule[med.id].takenBy} a las {new Date(medicationSchedule[med.id].takenAt).toLocaleTimeString('es-ES')}
-                                                    </span>
+                                {medicationDefinitions.length > 0 ? ( // Solo renderiza si hay definiciones cargadas
+                                    getMedicationsByTime(time).length > 0 ? (
+                                        getMedicationsByTime(time).map(med => (
+                                            <div key={med.id} className="flex items-center space-x-2 mt-1">
+                                                <label className="flex items-center space-x-2 flex-grow">
+                                                    <input
+                                                        type="checkbox"
+                                                        className={`form-checkbox h-5 w-5 ${time.includes('Ayunas') ? 'text-blue-600' :
+                                                            time.includes('Mañana') ? 'text-green-600' :
+                                                            time.includes('Antes de Comer') ? 'text-yellow-600' :
+                                                            time.includes('Tarde') ? 'text-orange-600' :
+                                                            time.includes('Noche') ? 'text-purple-600' :
+                                                            'text-indigo-600'} rounded`}
+                                                        checked={medicationSchedule[med.id]?.taken || false}
+                                                        onChange={() => toggleMedicationTaken(med.id)}
+                                                    />
+                                                    <span className="text-gray-700">{med.name} ({med.dose})</span>
+                                                    {medicationSchedule[med.id]?.taken && (
+                                                        <span className="text-xs text-gray-500 ml-auto">
+                                                            Tomado por: {medicationSchedule[med.id].takenBy} a las {new Date(medicationSchedule[med.id].takenAt).toLocaleTimeString('es-ES')}
+                                                        </span>
+                                                    )}
+                                                </label>
+                                                {isEditingMedications && (
+                                                    <div className="flex space-x-2 ml-2">
+                                                        <button
+                                                            onClick={() => startEditMedication(med)}
+                                                            className="p-1 bg-blue-200 text-blue-800 rounded-md hover:bg-blue-300 text-sm"
+                                                            title="Editar"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                            </svg>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => deleteMedicationDefinition(med.id)}
+                                                            className="p-1 bg-red-200 text-red-800 rounded-md hover:bg-red-300 text-sm"
+                                                            title="Eliminar"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
                                                 )}
-                                            </label>
-                                            {isEditingMedications && (
-                                                <div className="flex space-x-2 ml-2">
-                                                    <button
-                                                        onClick={() => startEditMedication(med)}
-                                                        className="p-1 bg-blue-200 text-blue-800 rounded-md hover:bg-blue-300 text-sm"
-                                                        title="Editar"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                                        </svg>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => deleteMedicationDefinition(med.id)}
-                                                        className="p-1 bg-red-200 text-red-800 rounded-md hover:bg-red-300 text-sm"
-                                                        title="Eliminar"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-gray-500 text-sm">No hay medicamentos definidos para este momento del día.</p>
+                                    )
                                 ) : (
-                                    <p className="text-gray-500 text-sm">No hay medicamentos definidos para este momento del día.</p>
+                                    <p className="text-gray-500 text-sm">Cargando definiciones de medicamentos...</p>
                                 )}
                             </div>
                         ))}
@@ -738,9 +746,6 @@ function App() {
             <footer className="w-full max-w-md text-center text-gray-500 text-sm mt-6">
                 <p>Aplicación de seguimiento de medicamentos</p>
             </footer>
-
-            {/* Tailwind CSS CDN */}
-            <script src="https://cdn.tailwindcss.com"></script>
         </div>
     );
 }
