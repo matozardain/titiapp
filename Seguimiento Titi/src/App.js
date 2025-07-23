@@ -95,6 +95,7 @@ function App() {
             const unsubscribe = onSnapshot(medDefsRef, (docSnap) => {
                 if (docSnap.exists() && docSnap.data().medications) {
                     setMedicationDefinitions(docSnap.data().medications);
+                    console.log("Medicamentos cargados desde Firestore:", docSnap.data().medications);
                 } else {
                     // Si no hay definiciones, cargar las iniciales y guardarlas
                     const initial = [
@@ -115,6 +116,7 @@ function App() {
                         { id: 'VitaminaD', name: 'Vitamina D', dose: '1 vez por mes', timeOfDay: 'Último Martes del Mes', frequency: 'monthly_last_tuesday' }
                     ];
                     setMedicationDefinitions(initial);
+                    console.log("Inicializando y guardando medicamentos en Firestore:", initial);
                     // Intentar guardar estas definiciones iniciales en Firestore
                     setDoc(medDefsRef, { medications: initial }, { merge: true })
                         .then(() => console.log("Definiciones iniciales de medicamentos guardadas."))
@@ -271,11 +273,12 @@ function App() {
         }
 
         try {
-            // CORRECCIÓN: Cambiado 'updatedMedations' a 'updatedMedications'
+            // Definir medDefsRef dentro de esta función para asegurar su ámbito
             const medDefsRef = doc(db, `artifacts/${appId}/public/data/medicationDefinitions`, 'currentDefinitions');
             await setDoc(medDefsRef, { medications: updatedMedications }, { merge: true });
             setMedicationDefinitions(updatedMedications); // Actualizar el estado local
             resetMedicationForm();
+            console.log("Medicamento guardado/actualizado:", newMed);
         } catch (error) {
             console.error("Error saving medication definition:", error);
             alert("Hubo un error al guardar el medicamento.");
@@ -294,6 +297,7 @@ function App() {
             const medDefsRef = doc(db, `artifacts/${appId}/public/data/medicationDefinitions`, 'currentDefinitions');
             await setDoc(medDefsRef, { medications: updatedMedications }, { merge: true });
             setMedicationDefinitions(updatedMedications); // Actualizar el estado local
+            console.log("Medicamento eliminado:", medId);
         } catch (error) {
             console.error("Error deleting medication definition:", error);
             alert("Hubo un error al eliminar el medicamento.");
@@ -345,7 +349,7 @@ function App() {
 
     // Modal para el nombre de usuario
     const UserModal = () => (
-        <div className="fixed inset-0 bg-black bg-opacity50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
                 <h2 className="text-xl font-bold mb-4 text-gray-800">Bienvenido/a</h2>
                 <p className="mb-4 text-gray-700">Por favor, ingresa tu nombre para que podamos identificarte en el historial de medicación.</p>
@@ -566,7 +570,7 @@ function App() {
                                     id="medDose"
                                     className="w-full p-2 border border-gray-300 rounded-md"
                                     value={newMedDose}
-                                    onChange={(e) => setNewDose(e.target.value)}
+                                    onChange={(e) => setNewMedDose(e.target.value)}
                                 />
                             </div>
                             <div>
