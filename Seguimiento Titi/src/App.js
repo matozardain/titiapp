@@ -272,6 +272,7 @@ function App() {
 
         try {
             // CORRECCIÓN: Cambiado 'updatedMedations' a 'updatedMedications'
+            const medDefsRef = doc(db, `artifacts/${appId}/public/data/medicationDefinitions`, 'currentDefinitions');
             await setDoc(medDefsRef, { medications: updatedMedications }, { merge: true });
             setMedicationDefinitions(updatedMedications); // Actualizar el estado local
             resetMedicationForm();
@@ -344,7 +345,7 @@ function App() {
 
     // Modal para el nombre de usuario
     const UserModal = () => (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity50 flex items-center justify-center z-50 p-4">
             <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
                 <h2 className="text-xl font-bold mb-4 text-gray-800">Bienvenido/a</h2>
                 <p className="mb-4 text-gray-700">Por favor, ingresa tu nombre para que podamos identificarte en el historial de medicación.</p>
