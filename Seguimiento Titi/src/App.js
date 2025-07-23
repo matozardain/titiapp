@@ -116,11 +116,11 @@ function App() {
                         { id: 'VitaminaD', name: 'Vitamina D', dose: '1 vez por mes', timeOfDay: 'Último Martes del Mes', frequency: 'monthly_last_tuesday' }
                     ];
                     setMedicationDefinitions(initial);
-                    console.log("Inicializando y guardando medicamentos en Firestore:", initial);
+                    console.log("Intentando guardar definiciones iniciales en Firestore:", initial); // Nuevo log
                     // Intentar guardar estas definiciones iniciales en Firestore
                     setDoc(medDefsRef, { medications: initial }, { merge: true })
-                        .then(() => console.log("Definiciones iniciales de medicamentos guardadas."))
-                        .catch(error => console.error("Error al guardar definiciones iniciales de medicamentos:", error));
+                        .then(() => console.log("Definiciones iniciales de medicamentos guardadas exitosamente.")) // Log de éxito
+                        .catch(error => console.error("Error al guardar definiciones iniciales de medicamentos:", error)); // Log de error
                 }
             }, (error) => {
                 console.error("Error fetching medication definitions:", error);
